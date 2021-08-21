@@ -26,3 +26,5 @@
     - project.plugins is defined
     - project.plugins | length > 0
     - item.key == "activate" or item.key == "deactivate"
+  register: out
+  changed_when: 'out.stdout is regex("Success: (de)?activated \d of \d plugins", ignorecase=true)'
