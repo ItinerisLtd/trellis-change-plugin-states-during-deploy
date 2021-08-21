@@ -1,0 +1,4 @@
+---
+- hosts: all
+  roles:
+    - ../../trellis-change-plugin-states-during-deploy

@@ -1,0 +1,15 @@
+galaxy_info:
+  author: Lee Hanbury-Pickett
+  description: Change WP plugin activation states during deployment
+  company: ItinerisLtd
+  license: MIT
+  min_ansible_version: 2.6
+  platforms:
+  - name: Ubuntu
+    versions:
+    - xenial
+  galaxy_tags:
+    - trellis
+    - wordpress
+    - wp-cli
+dependencies: []

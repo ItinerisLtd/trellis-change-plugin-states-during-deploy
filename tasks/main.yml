@@ -1,0 +1,28 @@
+---
+- name: Web root directory exists?
+  stat:
+    path: "{{ deploy_helper.current_path }}"
+  register: trellis_change_plugin_states_during_deploy_current_path
+
+- name: WordPress installed?
+  command: wp core is-installed --skip-plugins --skip-themes --require={{ deploy_helper.shared_path }}/tmp_multisite_constants.php
+  args:
+    chdir: "{{ deploy_helper.current_path }}"
+  register: trellis_change_plugin_states_during_deploy_wp_installed
+  when: trellis_change_plugin_states_during_deploy_current_path.stat.exists
+  changed_when: false
+  failed_when: trellis_change_plugin_states_during_deploy_wp_installed.stderr | default("") != "" or trellis_change_plugin_states_during_deploy_wp_installed.rc > 1
+
+- name: Change WP plugin activation states
+  command: wp plugin {{ item.key }} {{ item.value | join(' ') }} --skip-themes --skip-plugins {{ project.multisite.enabled | default(false) | ternary('--network', '') }}
+  args:
+    chdir: "{{ deploy_helper.current_path }}"
+  loop: "{{ project.plugins | dict2items }}"
+  loop_control:
+    label: "{{ item.key | capitalize }} plugins: {{ item.value | join(', ') }}"
+  # e.g. if a plugin could not be found, ignore and continue deployment.
+  ignore_errors: true # TODO: don't use `true` and ignore errors like "Warning: The 'xxx' plugin could not be found."
+  when:
+    - project.plugins is defined
+    - project.plugins | length > 0
+    - item.key == "activate" or item.key == "deactivate"
