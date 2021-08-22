@@ -20,11 +20,22 @@
   loop: "{{ project.plugins | dict2items }}"
   loop_control:
     label: "{{ item.key | capitalize }} plugins: {{ item.value | join(', ') }}"
-  # e.g. if a plugin could not be found, ignore and continue deployment.
-  ignore_errors: true # TODO: don't use `true` and ignore errors like "Warning: The 'xxx' plugin could not be found."
   when:
     - project.plugins is defined
     - project.plugins | length > 0
     - item.key == "activate" or item.key == "deactivate"
-  register: out
-  changed_when: 'out.stdout is regex("Success: (de)?activated \d of \d plugins", ignorecase=true)'
+  register: trellis_change_plugin_states_during_deploy_out
+  changed_when: 'trellis_change_plugin_states_during_deploy_out.stdout is regex("Success: (de)?activated \d of \d plugins", ignorecase=true)'
+  failed_when:
+    - trellis_change_plugin_states_during_deploy_out.rc > 0
+    - 'trellis_change_plugin_states_during_deploy_out.stderr_lines | map("regex_search", "Error: No plugins (de)?activated.") | select("string") | length == 0'
+
+- name: Gather list of failed plugins
+  set_fact:
+    trellis_change_plugin_states_during_deploy_failed_plugins: "{{ trellis_change_plugin_states_during_deploy_out.results | map(attribute='stderr_lines') | flatten | select('match', \"^Warning: The '([a-z0-9_\\-]*)' plugin could not be found\") }}"
+  when: trellis_change_plugin_states_during_deploy_out.results is defined
+
+- name: Warn of failed plugins
+  debug:
+    msg: "{{ trellis_change_plugin_states_during_deploy_failed_plugins }}"
+  when: trellis_change_plugin_states_during_deploy_failed_plugins | default([]) | length > 0
